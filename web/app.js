@@ -42,6 +42,8 @@ let elSpeedSlider, elSpeedValue, elCycles, elHeaderPc, elStatusBadge;
 let elDataGrid, elInstGrid, elInstWrap;
 let elDisasm, elExecLog, elMsgBar, elMsgText, elMsgIcon;
 let elLineCount, elByteCount;
+// PCB toolbar mirrors
+let pcbElStep, pcbElRun, pcbElReset, pcbElAssemble, pcbElSpeed, pcbElSpeedVal;
 
 // ─── Boot ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
@@ -106,6 +108,28 @@ function initDOM() {
     elResetBtn.addEventListener('click',   reset);
     elSpeedSlider.addEventListener('input', () => {
         elSpeedValue.textContent = elSpeedSlider.value + ' Hz';
+        if (pcbElSpeedVal) pcbElSpeedVal.textContent = elSpeedSlider.value + ' Hz';
+        if (pcbElSpeed)    pcbElSpeed.value = elSpeedSlider.value;
+        if (running) { clearInterval(runTimer); startRunLoop(); }
+    });
+
+    // PCB toolbar mirrors
+    pcbElAssemble = document.getElementById('pcb-assemble-btn');
+    pcbElStep     = document.getElementById('pcb-step-btn');
+    pcbElRun      = document.getElementById('pcb-run-btn');
+    pcbElReset    = document.getElementById('pcb-reset-btn');
+    pcbElSpeed    = document.getElementById('pcb-speed-slider');
+    pcbElSpeedVal = document.getElementById('pcb-speed-value');
+
+    pcbElAssemble.addEventListener('click', assemble);
+    pcbElStep.addEventListener('click',    singleStep);
+    pcbElRun.addEventListener('click',     toggleRun);
+    pcbElReset.addEventListener('click',   reset);
+    pcbElSpeed.addEventListener('input', () => {
+        const v = pcbElSpeed.value;
+        pcbElSpeedVal.textContent = v + ' Hz';
+        elSpeedSlider.value = v;
+        elSpeedValue.textContent = v + ' Hz';
         if (running) { clearInterval(runTimer); startRunLoop(); }
     });
 }
@@ -186,10 +210,7 @@ function assemble() {
 
     showMessage('success', `✓  Assembled ${result} bytes — program loaded`);
     elByteCount.textContent = result + ' bytes';
-    elStepBtn.disabled  = false;
-    elRunBtn.disabled   = false;
-    elResetBtn.disabled = false;
-
+    setButtonsEnabled(true);
     updateDisplay();
 }
 
@@ -208,6 +229,8 @@ function doStep() {
     const operand = M._cpu_get_last_operand();
     addLogEntry(opcode, operand);
     updateDisplay();
+    if (typeof updatePCB === 'function')
+        updatePCB(M._cpu_get_r0(), M._cpu_get_r1(), M._cpu_get_pc(), !!M._cpu_is_halted(), opcode, operand);
 
     if (M._cpu_is_halted()) stopRun();
 }
@@ -217,7 +240,9 @@ function toggleRun() {
     if (!loaded || M._cpu_is_halted()) return;
     running = true;
     elRunBtn.textContent = '⏸ PAUSE';
-    elStepBtn.disabled   = true;
+    if (pcbElRun) pcbElRun.textContent = '⏸ PAUSE';
+    elStepBtn.disabled = true;
+    if (pcbElStep) pcbElStep.disabled = true;
     startRunLoop();
 }
 
@@ -233,7 +258,17 @@ function stopRun() {
     if (runTimer) { clearInterval(runTimer); runTimer = null; }
     running = false;
     elRunBtn.textContent = '▶ RUN';
-    if (loaded) elStepBtn.disabled = false;
+    if (pcbElRun) pcbElRun.textContent = '▶ RUN';
+    if (loaded) setButtonsEnabled(true);
+}
+
+function setButtonsEnabled(on) {
+    elStepBtn.disabled  = !on;
+    elRunBtn.disabled   = !on;
+    elResetBtn.disabled = !on;
+    if (pcbElStep)  pcbElStep.disabled  = !on;
+    if (pcbElRun)   pcbElRun.disabled   = !on;
+    if (pcbElReset) pcbElReset.disabled = !on;
 }
 
 function reset() {
@@ -420,9 +455,15 @@ function updateEditorMeta() {
 function showMessage(type, text) {
     elMsgBar.className = 'message-bar ' + type;
     elMsgText.textContent = text;
+    // Also mirror in PCB modal
+    const pcbBar  = document.getElementById('pcb-message-bar');
+    const pcbText = document.getElementById('pcb-message-text');
+    if (pcbBar && pcbText) { pcbBar.className = 'message-bar ' + type; pcbText.textContent = text; }
 }
 function hideMessage() {
     elMsgBar.className = 'message-bar hidden';
+    const pcbBar = document.getElementById('pcb-message-bar');
+    if (pcbBar) pcbBar.className = 'message-bar hidden';
 }
 
 // ─── Utilities ────────────────────────────────────────────────────────────────

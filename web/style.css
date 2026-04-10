@@ -708,3 +708,249 @@ input[type=range]::-webkit-slider-runnable-track {
         min-height: 400px;
     }
 }
+
+/* ==========================================================================
+   11. PCB DIAGRAM
+   ========================================================================== */
+
+/* Modal overlay */
+.pcb-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background-color: var(--bg-app);
+    display: flex;
+    flex-direction: column;
+    animation: pcb-in 0.2s ease;
+}
+.pcb-modal.hidden { display: none; }
+@keyframes pcb-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.pcb-modal-inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.pcb-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border-subtle);
+    background-color: var(--bg-panel);
+    flex-shrink: 0;
+}
+.pcb-header-left  { display: flex; align-items: center; gap: 14px; }
+.pcb-header-center { display: flex; align-items: center; gap: 8px; }
+
+.pcb-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--text-primary);
+}
+.pcb-subtitle {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.05em;
+}
+.pcb-signal-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #3a5a1a;
+}
+#pcb-signal-text {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.05em;
+}
+
+/* Toolbar embedded inside PCB modal */
+.pcb-inner-toolbar {
+    background-color: var(--bg-app);
+    border-top: none;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Message bar inside PCB modal */
+.message-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 20px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    flex-shrink: 0;
+    transition: all 0.3s;
+}
+.message-bar.hidden  { display: none; }
+.message-bar.success { background: rgba(107,125,98,0.15); border-bottom: 1px solid rgba(107,125,98,0.25); color: var(--accent-sage); }
+.message-bar.error   { background: rgba(188,88,59,0.12);  border-bottom: 1px solid rgba(188,88,59,0.25);  color: var(--accent-rust); }
+.msg-close { background: none; border: none; cursor: pointer; color: inherit; font-size: 14px; margin-left: auto; opacity: 0.7; }
+.msg-close:hover { opacity: 1; }
+
+.pcb-modal-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    gap: 1px;
+    background-color: var(--border-subtle);
+}
+
+/* SVG area */
+.pcb-svg-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #0a170a;
+    overflow: hidden;
+    padding: 24px;
+}
+.pcb-svg {
+    width: 100%;
+    height: 100%;
+    max-width: 900px;
+    max-height: 600px;
+}
+
+/* ── SVG component styles (referenced via class in SVG) ────────────────────── */
+.comp-pad  { fill: #122012; }
+.comp-body { fill: #0d120d; stroke: #2a5a1a; stroke-width: 1; }
+.comp-notch { fill: none; stroke: #1a3a1a; stroke-width: 1; }
+.comp-pin  { fill: #5a7a30; rx: 1; }
+.comp-label {
+    fill: #4a8a4a;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    text-anchor: middle;
+    letter-spacing: 2px;
+}
+.comp-sub {
+    fill: #2a5a2a;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7px;
+    text-anchor: middle;
+    letter-spacing: 1px;
+}
+.comp-val {
+    fill: #70d070;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 700;
+    text-anchor: middle;
+    letter-spacing: 1px;
+}
+.board-label {
+    fill: #1a3a1a;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7px;
+    letter-spacing: 1px;
+}
+
+/* Active component highlight */
+.pcb-comp-active .comp-body   { stroke: #5ab04a; stroke-width: 1.5; }
+.pcb-comp-active .comp-label  { fill: #80d060; }
+.pcb-comp-active .comp-val    { fill: #a0f080; }
+
+/* ── Trace styles ─────────────────────────────────────────────────────────── */
+.pcb-trace {
+    fill: none;
+    stroke: #2a3a14;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Animated active trace */
+.trace-active {
+    stroke: #c8a030;
+    stroke-width: 3;
+    filter: url(#glow);
+    marker-end: url(#arr-active);
+    stroke-dasharray: 0; /* solid when flowing */
+    animation: trace-flow 0.5s ease forwards;
+}
+@keyframes trace-flow {
+    0%   { stroke: #4a7a20; filter: none; }
+    30%  { stroke: #f0c040; filter: url(#glow-strong); }
+    100% { stroke: #c8a030; filter: url(#glow); }
+}
+
+/* ── PCB dot / via circles ───────────────────────────────────────────────── */
+.pcb-via {
+    fill: #3a6020;
+    stroke: #5a9030;
+    stroke-width: 1;
+}
+
+/* ── ISA reference panel ────────────────────────────────────────────────── */
+.pcb-isa-panel {
+    width: 340px;
+    flex-shrink: 0;
+    background-color: var(--bg-app);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.pcb-isa-title {
+    padding: 12px 16px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--text-tertiary);
+    border-bottom: 1px solid var(--border-subtle);
+    background-color: var(--bg-panel);
+    flex-shrink: 0;
+}
+.pcb-isa-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    flex: 1;
+    overflow-y: auto;
+    display: block;
+}
+.pcb-isa-table thead {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    border-bottom: 1px solid var(--border-subtle);
+}
+.pcb-isa-table tbody {
+    display: block;
+    overflow-y: auto;
+    height: calc(100% - 30px);
+}
+.pcb-isa-table th {
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    letter-spacing: 0.1em;
+}
+.isa-row {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background 0.15s;
+}
+.isa-row:hover { background-color: var(--bg-panel); }
+.isa-row td { padding: 6px 10px; color: var(--text-tertiary); }
+.isa-op   { color: var(--text-secondary); font-weight: 500; width: 42%; }
+.isa-code { color: var(--accent-brass);   width: 16%; }
+.isa-desc { font-size: 10px; color: var(--text-tertiary); }
+
+/* Active row in ISA table (matches last executed opcode) */
+.isa-row-active td  { background-color: rgba(80, 50, 10, 0.4); }
+.isa-row-active .isa-op   { color: #d4a840; }
+.isa-row-active .isa-code { color: #f0c060; }

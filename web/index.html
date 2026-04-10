@@ -62,6 +62,8 @@
             <button id="step-btn"  class="btn btn-secondary" disabled>STEP →</button>
             <button id="run-btn"   class="btn btn-secondary" disabled>▶ RUN</button>
             <button id="reset-btn" class="btn btn-ghost"     disabled>↺ RESET</button>
+            <div class="divider"></div>
+            <button id="pcb-btn" class="btn btn-ghost" onclick="togglePCB()">⬡ PCB VIEW</button>
         </div>
         <div class="toolbar-right">
             <label class="speed-label">SPEED</label>
@@ -218,7 +220,62 @@ HALT            ; done</textarea>
     </main>
 </div><!-- #app -->
 
+<!-- ─── PCB Modal ──────────────────────────────────────────────────────────── -->
+<div id="pcb-modal" class="pcb-modal hidden">
+    <div class="pcb-modal-inner">
+        <div class="pcb-modal-header">
+            <div class="pcb-header-left">
+                <span class="pcb-title">PCB DIAGRAM</span>
+                <span class="pcb-subtitle">8-BIT RISC CPU · REV 1.0</span>
+            </div>
+            <div class="pcb-header-center" id="pcb-signal-label">
+                <span class="pcb-signal-dot"></span>
+                <span id="pcb-signal-text">IDLE</span>
+            </div>
+            <button class="btn btn-ghost" onclick="togglePCB()">✕ CLOSE</button>
+        </div>
+        <!-- Toolbar mirrored inside PCB view -->
+        <div class="toolbar pcb-inner-toolbar">
+            <div class="toolbar-left">
+                <button id="pcb-assemble-btn" class="btn btn-primary">▶ ASSEMBLE</button>
+                <div class="divider"></div>
+                <button id="pcb-step-btn"  class="btn btn-secondary" disabled>STEP →</button>
+                <button id="pcb-run-btn"   class="btn btn-secondary" disabled>▶ RUN</button>
+                <button id="pcb-reset-btn" class="btn btn-ghost"     disabled>↺ RESET</button>
+            </div>
+            <div class="toolbar-right">
+                <label class="speed-label">SPEED</label>
+                <input type="range" id="pcb-speed-slider" min="1" max="60" value="5">
+                <span id="pcb-speed-value" class="speed-val">5 Hz</span>
+            </div>
+        </div>
+        <!-- Message bar inside PCB -->
+        <div id="pcb-message-bar" class="message-bar hidden">
+            <span id="pcb-message-icon"></span>
+            <span id="pcb-message-text"></span>
+            <button class="msg-close" onclick="document.getElementById('pcb-message-bar').classList.add('hidden')">✕</button>
+        </div>
+        <div class="pcb-modal-body">
+            <div id="pcb-svg-wrap" class="pcb-svg-wrap"></div>
+            <div class="pcb-isa-panel">
+                <div class="pcb-isa-title">INSTRUCTION SET</div>
+                <table class="pcb-isa-table">
+                    <thead>
+                        <tr>
+                            <th>MNEMONIC</th>
+                            <th>OP</th>
+                            <th>DESCRIPTION</th>
+                        </tr>
+                    </thead>
+                    <tbody id="isa-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="cpu.js"></script>
+<script src="pcb.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
