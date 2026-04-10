@@ -81,6 +81,15 @@ body {
 }
 
 .hidden { display: none !important; }
+
+#app:not(.hidden) {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+}
+
 .divider {
     width: 1px;
     height: 20px;
@@ -375,6 +384,7 @@ input[type=range]::-webkit-slider-runnable-track {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
 }
 
 /* ── Right panel sub-sections ─────────────────────────────────────────── */
