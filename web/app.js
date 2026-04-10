@@ -42,8 +42,6 @@ let elSpeedSlider, elSpeedValue, elCycles, elHeaderPc, elStatusBadge;
 let elDataGrid, elInstGrid, elInstWrap;
 let elDisasm, elExecLog, elMsgBar, elMsgText, elMsgIcon;
 let elLineCount, elByteCount;
-// PCB toolbar mirrors
-let pcbElStep, pcbElRun, pcbElReset, pcbElAssemble, pcbElSpeed, pcbElSpeedVal;
 
 // ─── Boot ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
@@ -74,6 +72,8 @@ function showApp() {
         buildGrids();
         buildColHeader();
         updateDisplay();
+        // Build PCB eagerly — it's always visible now
+        buildPCB();
         // Wire editor line counter
         elEditor.addEventListener('input', updateEditorMeta);
         updateEditorMeta();
@@ -108,28 +108,6 @@ function initDOM() {
     elResetBtn.addEventListener('click',   reset);
     elSpeedSlider.addEventListener('input', () => {
         elSpeedValue.textContent = elSpeedSlider.value + ' Hz';
-        if (pcbElSpeedVal) pcbElSpeedVal.textContent = elSpeedSlider.value + ' Hz';
-        if (pcbElSpeed)    pcbElSpeed.value = elSpeedSlider.value;
-        if (running) { clearInterval(runTimer); startRunLoop(); }
-    });
-
-    // PCB toolbar mirrors
-    pcbElAssemble = document.getElementById('pcb-assemble-btn');
-    pcbElStep     = document.getElementById('pcb-step-btn');
-    pcbElRun      = document.getElementById('pcb-run-btn');
-    pcbElReset    = document.getElementById('pcb-reset-btn');
-    pcbElSpeed    = document.getElementById('pcb-speed-slider');
-    pcbElSpeedVal = document.getElementById('pcb-speed-value');
-
-    pcbElAssemble.addEventListener('click', assemble);
-    pcbElStep.addEventListener('click',    singleStep);
-    pcbElRun.addEventListener('click',     toggleRun);
-    pcbElReset.addEventListener('click',   reset);
-    pcbElSpeed.addEventListener('input', () => {
-        const v = pcbElSpeed.value;
-        pcbElSpeedVal.textContent = v + ' Hz';
-        elSpeedSlider.value = v;
-        elSpeedValue.textContent = v + ' Hz';
         if (running) { clearInterval(runTimer); startRunLoop(); }
     });
 }
@@ -240,9 +218,7 @@ function toggleRun() {
     if (!loaded || M._cpu_is_halted()) return;
     running = true;
     elRunBtn.textContent = '⏸ PAUSE';
-    if (pcbElRun) pcbElRun.textContent = '⏸ PAUSE';
     elStepBtn.disabled = true;
-    if (pcbElStep) pcbElStep.disabled = true;
     startRunLoop();
 }
 
@@ -258,7 +234,6 @@ function stopRun() {
     if (runTimer) { clearInterval(runTimer); runTimer = null; }
     running = false;
     elRunBtn.textContent = '▶ RUN';
-    if (pcbElRun) pcbElRun.textContent = '▶ RUN';
     if (loaded) setButtonsEnabled(true);
 }
 
@@ -266,9 +241,6 @@ function setButtonsEnabled(on) {
     elStepBtn.disabled  = !on;
     elRunBtn.disabled   = !on;
     elResetBtn.disabled = !on;
-    if (pcbElStep)  pcbElStep.disabled  = !on;
-    if (pcbElRun)   pcbElRun.disabled   = !on;
-    if (pcbElReset) pcbElReset.disabled = !on;
 }
 
 function reset() {
@@ -434,14 +406,21 @@ function addLogEntry(opcode, operand) {
     elExecLog.scrollTop = elExecLog.scrollHeight;
 }
 
-// ─── Tab switching ────────────────────────────────────────────────────────────
+// ─── Tab switching (DATA ↔ PROGRAM only; PCB is always visible) ──────────────────
 function switchTab(tab) {
     curTab = tab;
+    const isData = tab === 'data';
     const isInst = tab === 'inst';
-    document.getElementById('tab-data').classList.toggle('active', !isInst);
+
+    // Tab active states
+    document.getElementById('tab-data').classList.toggle('active', isData);
     document.getElementById('tab-inst').classList.toggle('active', isInst);
-    document.getElementById('data-wrap').classList.toggle('hidden', isInst);
+
+    // Show/hide content panes
+    document.getElementById('data-wrap').classList.toggle('hidden', !isData);
     elInstWrap.classList.toggle('hidden', !isInst);
+
+    // PC legend dot only meaningful in PROGRAM view
     document.getElementById('legend-pc').style.display = isInst ? '' : 'none';
 }
 
@@ -455,15 +434,9 @@ function updateEditorMeta() {
 function showMessage(type, text) {
     elMsgBar.className = 'message-bar ' + type;
     elMsgText.textContent = text;
-    // Also mirror in PCB modal
-    const pcbBar  = document.getElementById('pcb-message-bar');
-    const pcbText = document.getElementById('pcb-message-text');
-    if (pcbBar && pcbText) { pcbBar.className = 'message-bar ' + type; pcbText.textContent = text; }
 }
 function hideMessage() {
     elMsgBar.className = 'message-bar hidden';
-    const pcbBar = document.getElementById('pcb-message-bar');
-    if (pcbBar) pcbBar.className = 'message-bar hidden';
 }
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
@@ -472,3 +445,4 @@ function hex2(n) { return n.toString(16).padStart(2, '0').toUpperCase(); }
 // Expose tab switch globally (called from HTML onclick)
 window.switchTab   = switchTab;
 window.hideMessage = hideMessage;
+

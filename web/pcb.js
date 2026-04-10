@@ -67,15 +67,15 @@ const ISA_TABLE = [
 
 // ─── Build ────────────────────────────────────────────────────────────────────
 function buildPCB() {
-    const modal = document.getElementById('pcb-modal');
-    if (!modal) return;
-
-    // Build SVG
     const svgNS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('viewBox', '0 0 640 430');
+    // No viewBox – we handle transforms manually for zoom/pan
     svg.setAttribute('id', 'pcb-svg');
     svg.setAttribute('class', 'pcb-svg');
+    svg.style.width  = '100%';
+    svg.style.height = '100%';
+    svg.style.display = 'block';
+    svg.style.cursor = 'grab';
 
     // Defs: arrowhead + filters
     svg.innerHTML = `
@@ -94,84 +94,92 @@ function buildPCB() {
             <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
             <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
-        <!-- PCB dot grid pattern -->
         <pattern id="pcb-dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
             <circle cx="10" cy="10" r="0.8" fill="#1a3a1a"/>
         </pattern>
     </defs>
-    <!-- Board background -->
-    <rect width="640" height="430" fill="#0a170a"/>
-    <rect width="640" height="430" fill="url(#pcb-dots)"/>
-    <!-- Board edge chamfer -->
-    <rect x="6" y="6" width="628" height="418" rx="4" fill="none" stroke="#1a3a1a" stroke-width="1.5"/>
     `;
 
-    // Draw traces (base layer, dim copper)
+    // Infinite board background (very large rect, panned with viewport group)
+    const bg1 = document.createElementNS(svgNS, 'rect');
+    bg1.setAttribute('x','-5000'); bg1.setAttribute('y','-5000');
+    bg1.setAttribute('width','10640'); bg1.setAttribute('height','10430');
+    bg1.setAttribute('fill','#0a170a');
+    svg.appendChild(bg1);
+
+    const bg2 = document.createElementNS(svgNS, 'rect');
+    bg2.setAttribute('x','-5000'); bg2.setAttribute('y','-5000');
+    bg2.setAttribute('width','10640'); bg2.setAttribute('height','10430');
+    bg2.setAttribute('fill','url(#pcb-dots)');
+    svg.appendChild(bg2);
+
+    // ── Viewport group (all content lives here, we transform this) ──────────────
+    const vp = document.createElementNS(svgNS, 'g');
+    vp.setAttribute('id', 'pcb-vp');
+    svg.appendChild(vp);
+
+    // Board outline
+    const outline = document.createElementNS(svgNS,'rect');
+    outline.setAttribute('x','6'); outline.setAttribute('y','6');
+    outline.setAttribute('width','628'); outline.setAttribute('height','418');
+    outline.setAttribute('rx','4'); outline.setAttribute('fill','none');
+    outline.setAttribute('stroke','#1a3a1a'); outline.setAttribute('stroke-width','1.5');
+    vp.appendChild(outline);
+
+    // Draw traces
     for (const [key, t] of Object.entries(TRACES)) {
         const path = document.createElementNS(svgNS, 'path');
         path.setAttribute('d', t.d);
         path.setAttribute('class', 'pcb-trace');
         path.setAttribute('id', 'trace-' + key);
         path.setAttribute('marker-end', 'url(#arr)');
-        svg.appendChild(path);
+        vp.appendChild(path);
     }
 
-    // Draw vias (small circles at trace junctions)
+    // Vias
     const vias = [[135,52],[345,52],[477,85],[445,165],[400,205],[555,200],[385,340],[385,360],[215,340],[175,360]];
     for (const [cx,cy] of vias) {
         const c = document.createElementNS(svgNS,'circle');
         c.setAttribute('cx', cx); c.setAttribute('cy', cy);
         c.setAttribute('r','3'); c.setAttribute('class','pcb-via');
-        svg.appendChild(c);
+        vp.appendChild(c);
     }
 
-    // Draw components
+    // Components
     for (const [key, c] of Object.entries(COMPS)) {
         const g = document.createElementNS(svgNS, 'g');
         g.setAttribute('id', c.id);
         g.setAttribute('class', 'pcb-comp');
 
-        // Shadow pad
         const pad = document.createElementNS(svgNS,'rect');
         pad.setAttribute('x', c.x-2); pad.setAttribute('y', c.y-2);
         pad.setAttribute('width', c.w+4); pad.setAttribute('height', c.h+4);
         pad.setAttribute('rx','3'); pad.setAttribute('class','comp-pad');
         g.appendChild(pad);
 
-        // IC body
         const body = document.createElementNS(svgNS,'rect');
         body.setAttribute('x', c.x); body.setAttribute('y', c.y);
         body.setAttribute('width', c.w); body.setAttribute('height', c.h);
         body.setAttribute('rx','2'); body.setAttribute('class','comp-body');
         g.appendChild(body);
 
-        // IC notch (orientation mark)
         const cx2 = c.x + c.w/2;
         const notch = document.createElementNS(svgNS,'path');
         notch.setAttribute('d', `M ${cx2-6},${c.y} Q ${cx2},${c.y-5} ${cx2+6},${c.y}`);
         notch.setAttribute('class','comp-notch');
         g.appendChild(notch);
 
-        // Pins (left side)
         for (let i=0; i<3; i++) {
             const py = c.y + 14 + i*16;
-            const pin = document.createElementNS(svgNS,'rect');
-            pin.setAttribute('x', c.x-6); pin.setAttribute('y', py);
-            pin.setAttribute('width','6'); pin.setAttribute('height','5');
-            pin.setAttribute('class','comp-pin');
-            g.appendChild(pin);
-        }
-        // Pins (right side)
-        for (let i=0; i<3; i++) {
-            const py = c.y + 14 + i*16;
-            const pin = document.createElementNS(svgNS,'rect');
-            pin.setAttribute('x', c.x+c.w); pin.setAttribute('y', py);
-            pin.setAttribute('width','6'); pin.setAttribute('height','5');
-            pin.setAttribute('class','comp-pin');
-            g.appendChild(pin);
+            ['left','right'].forEach(side => {
+                const pin = document.createElementNS(svgNS,'rect');
+                pin.setAttribute('x', side==='left' ? c.x-6 : c.x+c.w);
+                pin.setAttribute('y', py); pin.setAttribute('width','6'); pin.setAttribute('height','5');
+                pin.setAttribute('class','comp-pin');
+                g.appendChild(pin);
+            });
         }
 
-        // Labels
         const lbl = document.createElementNS(svgNS,'text');
         lbl.setAttribute('x', c.x + c.w/2); lbl.setAttribute('y', c.y + 22);
         lbl.setAttribute('class','comp-label'); lbl.textContent = c.label;
@@ -182,14 +190,13 @@ function buildPCB() {
         sub.setAttribute('class','comp-sub'); sub.textContent = c.sub;
         g.appendChild(sub);
 
-        // Value text (updated live)
         const val = document.createElementNS(svgNS,'text');
         val.setAttribute('x', c.x + c.w/2); val.setAttribute('y', c.y + 54);
         val.setAttribute('class','comp-val'); val.setAttribute('id', c.id + '-val');
         val.textContent = '——';
         g.appendChild(val);
 
-        svg.appendChild(g);
+        vp.appendChild(g);
     }
 
     // Board label
@@ -197,19 +204,19 @@ function buildPCB() {
     brd.setAttribute('x','10'); brd.setAttribute('y','422');
     brd.setAttribute('class','board-label');
     brd.textContent = '8-BIT RISC CPU  REV 1.0  © CPU-SIM';
-    svg.appendChild(brd);
+    vp.appendChild(brd);
 
-    document.getElementById('pcb-svg-wrap').appendChild(svg);
+    const wrap = document.getElementById('pcb-svg-wrap');
+    wrap.appendChild(svg);
 
-    // Build ISA table
-    const tbody = document.getElementById('isa-tbody');
-    tbody.innerHTML = ISA_TABLE.map(r => `
-        <tr class="isa-row" data-op="${r.code}">
-            <td class="isa-op">${r.op}</td>
-            <td class="isa-code">${r.code}</td>
-            <td class="isa-desc">${r.desc}</td>
-        </tr>`).join('');
+    // Fit and enable canvas controls after first render
+    requestAnimationFrame(() => {
+        fitPCB();
+        initCanvasControls(svg);
+    });
 }
+
+
 
 // ─── Update (called after every CPU step) ────────────────────────────────────
 let _activeTraceTimer = null;
@@ -311,19 +318,103 @@ function compForOpcode(op) {
     return always;
 }
 
-// ─── Toggle ───────────────────────────────────────────────────────────────────
-let _pcbBuilt = false;
-function togglePCB() {
-    const modal = document.getElementById('pcb-modal');
-    const isOpen = !modal.classList.contains('hidden');
-    if (isOpen) {
-        modal.classList.add('hidden');
-        document.getElementById('pcb-btn').textContent = '⬡ PCB VIEW';
-    } else {
-        if (!_pcbBuilt) { buildPCB(); _pcbBuilt = true; }
-        modal.classList.remove('hidden');
-        document.getElementById('pcb-btn').textContent = '✕ CLOSE PCB';
-    }
+// ─── Canvas zoom / pan ───────────────────────────────────────────────────────
+let _cam = { x: 0, y: 0, scale: 1 };  // current transform state
+let _drag = null;                       // drag state: { startX, startY, camX, camY }
+
+const BOARD_W = 640, BOARD_H = 430;
+const MIN_SCALE = 0.2, MAX_SCALE = 8;
+
+function applyTransform() {
+    const vp = document.getElementById('pcb-vp');
+    if (!vp) return;
+    vp.setAttribute('transform', `translate(${_cam.x},${_cam.y}) scale(${_cam.scale})`);
+    // Update zoom indicator
+    const ind = document.getElementById('pcb-zoom-indicator');
+    if (ind) ind.textContent = Math.round(_cam.scale * 100) + '%';
 }
-window.togglePCB = togglePCB;
+
+function fitPCB() {
+    const wrap = document.getElementById('pcb-svg-wrap');
+    const svg  = document.getElementById('pcb-svg');
+    if (!wrap || !svg) return;
+    const W = wrap.clientWidth  || 900;
+    const H = wrap.clientHeight || 600;
+    const padding = 40;
+    const s = Math.min((W - padding*2) / BOARD_W, (H - padding*2) / BOARD_H);
+    _cam.scale = s;
+    _cam.x = (W - BOARD_W * s) / 2;
+    _cam.y = (H - BOARD_H * s) / 2;
+    applyTransform();
+}
+
+function initCanvasControls(svg) {
+    const wrap = document.getElementById('pcb-svg-wrap');
+
+    // ── Scroll to zoom ────────────────────────────────────────────────────────
+    wrap.addEventListener('wheel', e => {
+        e.preventDefault();
+        const rect  = svg.getBoundingClientRect();
+        const mx    = e.clientX - rect.left;   // mouse pos in SVG pixel space
+        const my    = e.clientY - rect.top;
+        const delta = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+        const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, _cam.scale * delta));
+        // Zoom toward cursor
+        _cam.x = mx - (mx - _cam.x) * (newScale / _cam.scale);
+        _cam.y = my - (my - _cam.y) * (newScale / _cam.scale);
+        _cam.scale = newScale;
+        applyTransform();
+    }, { passive: false });
+
+    // ── Drag to pan ───────────────────────────────────────────────────────────
+    wrap.addEventListener('mousedown', e => {
+        if (e.button !== 0) return;
+        _drag = { startX: e.clientX, startY: e.clientY, camX: _cam.x, camY: _cam.y };
+        svg.style.cursor = 'grabbing';
+        e.preventDefault();
+    });
+    window.addEventListener('mousemove', e => {
+        if (!_drag) return;
+        _cam.x = _drag.camX + (e.clientX - _drag.startX);
+        _cam.y = _drag.camY + (e.clientY - _drag.startY);
+        applyTransform();
+    });
+    window.addEventListener('mouseup', () => {
+        _drag = null;
+        if (svg) svg.style.cursor = 'grab';
+    });
+
+    // ── Double-click to fit ───────────────────────────────────────────────────
+    wrap.addEventListener('dblclick', fitPCB);
+
+    // ── Touch pinch-to-zoom ───────────────────────────────────────────────────
+    let _lastDist = null;
+    wrap.addEventListener('touchstart', e => {
+        if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            _lastDist = Math.hypot(dx, dy);
+        }
+    }, { passive: true });
+    wrap.addEventListener('touchmove', e => {
+        if (e.touches.length === 2 && _lastDist) {
+            e.preventDefault();
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const dist = Math.hypot(dx, dy);
+            const delta = dist / _lastDist;
+            _lastDist = dist;
+            const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, _cam.scale * delta));
+            _cam.scale = newScale;
+            applyTransform();
+        }
+    }, { passive: false });
+    wrap.addEventListener('touchend', () => { _lastDist = null; });
+}
+
+// ─── Exports ──────────────────────────────────────────────────────────────────
+window.buildPCB  = buildPCB;
 window.updatePCB = updatePCB;
+window.fitPCB    = fitPCB;
+// Legacy alias (toolbar onclick still calls switchTab directly)
+window.togglePCB = () => window.switchTab && window.switchTab('pcb');

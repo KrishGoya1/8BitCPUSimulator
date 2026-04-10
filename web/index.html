@@ -62,8 +62,6 @@
             <button id="step-btn"  class="btn btn-secondary" disabled>STEP →</button>
             <button id="run-btn"   class="btn btn-secondary" disabled>▶ RUN</button>
             <button id="reset-btn" class="btn btn-ghost"     disabled>↺ RESET</button>
-            <div class="divider"></div>
-            <button id="pcb-btn" class="btn btn-ghost" onclick="togglePCB()">⬡ PCB VIEW</button>
         </div>
         <div class="toolbar-right">
             <label class="speed-label">SPEED</label>
@@ -102,9 +100,9 @@ HALT            ; done</textarea>
                 <span id="byte-count">— bytes</span>
             </div>
 
-            <!-- ISA quick reference -->
-            <div class="isa-ref">
-                <div class="isa-title">QUICK REFERENCE</div>
+            <!-- ISA quick reference (collapsible) -->
+            <details class="isa-ref" id="isa-ref">
+                <summary class="isa-title">QUICK REFERENCE</summary>
                 <div class="isa-grid">
                     <div class="isa-group">
                         <div class="isa-group-title">LOAD / MOV</div>
@@ -135,17 +133,75 @@ HALT            ; done</textarea>
                         <code>HALT</code>
                     </div>
                 </div>
-            </div>
+            </details>
         </section>
 
-        <!-- ── Middle: CPU State ────────────────────────────────────────── -->
+        <!-- ── Middle: PCB (top) + Memory Grid (bottom) ─────────────────── -->
+        <section class="panel memory-panel">
+
+            <!-- ── PCB sub-panel: always visible, top half ─────────────────── -->
+            <div class="pcb-always-section">
+                <div class="panel-header">
+                    <span class="panel-title">PCB DIAGRAM</span>
+                    <div class="pcb-panel-controls" id="pcb-panel-controls">
+                        <span id="pcb-zoom-indicator" class="pcb-zoom-chip">100%</span>
+                        <button class="btn btn-ghost" style="padding:3px 8px;font-size:10px" onclick="fitPCB()">FIT</button>
+                    </div>
+                </div>
+                <!-- Zoomable / pannable PCB canvas -->
+                <div id="pcb-svg-wrap" class="pcb-svg-wrap"></div>
+            </div>
+
+            <!-- ── Memory sub-panel: always visible, bottom half ──────────── -->
+            <div class="memory-section">
+                <div class="panel-header">
+                    <span class="panel-title">MEMORY</span>
+                    <div class="tabs">
+                        <button class="tab active" id="tab-data" onclick="switchTab('data')">DATA</button>
+                        <button class="tab"        id="tab-inst" onclick="switchTab('inst')">PROGRAM</button>
+                    </div>
+                </div>
+
+                <!-- Column header labels -->
+                <div class="grid-col-header" id="col-header"></div>
+
+                <!-- Data grid -->
+                <div class="grid-wrap" id="data-wrap">
+                    <div class="grid-row-labels" id="row-labels-data"></div>
+                    <div class="mem-grid" id="data-grid"></div>
+                </div>
+
+                <!-- Program grid -->
+                <div class="grid-wrap hidden" id="inst-wrap">
+                    <div class="grid-row-labels" id="row-labels-inst"></div>
+                    <div class="mem-grid" id="inst-grid"></div>
+                </div>
+
+                <!-- Legend -->
+                <div class="mem-legend" id="mem-legend">
+                    <div class="legend-item"><span class="legend-dot cyan"></span>Written / read</div>
+                    <div class="legend-item" id="legend-pc"><span class="legend-dot pink"></span>Program counter</div>
+                    <div class="legend-item"><span class="legend-dot amber"></span>Opcode byte</div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ── Right: CPU State ─────────────────────────────────────────── -->
         <section class="panel cpu-panel">
             <div class="panel-header">
                 <span class="panel-title">CPU STATE</span>
             </div>
 
-            <!-- Registers -->
+            <!-- Registers: PC first (prominent top row), R0+R1 below -->
             <div class="registers">
+                <div class="reg-card pc-card" id="card-pc">
+                    <div class="reg-name">PC</div>
+                    <div class="reg-hex" id="pc-hex">0x00</div>
+                    <div class="reg-dec" id="pc-dec">0</div>
+                    <div class="reg-track"><div class="reg-bar pc-bar" id="pc-bar"></div></div>
+                    <div class="reg-bits" id="pc-bits">00000000</div>
+                </div>
                 <div class="reg-card" id="card-r0">
                     <div class="reg-name">R0</div>
                     <div class="reg-hex" id="r0-hex">0x00</div>
@@ -160,25 +216,18 @@ HALT            ; done</textarea>
                     <div class="reg-track"><div class="reg-bar" id="r1-bar"></div></div>
                     <div class="reg-bits" id="r1-bits">00000000</div>
                 </div>
-                <div class="reg-card pc-card" id="card-pc">
-                    <div class="reg-name">PC</div>
-                    <div class="reg-hex" id="pc-hex">0x00</div>
-                    <div class="reg-dec" id="pc-dec">0</div>
-                    <div class="reg-track"><div class="reg-bar pc-bar" id="pc-bar"></div></div>
-                    <div class="reg-bits" id="pc-bits">00000000</div>
-                </div>
             </div>
 
-            <!-- Disassembly -->
-            <div class="sub-section">
+            <!-- Disassembly: flex-2 so it always gets the most space -->
+            <div class="sub-section disasm-section">
                 <div class="sub-title">DISASSEMBLY</div>
                 <div class="disasm" id="disasm">
                     <div class="disasm-empty">No program loaded</div>
                 </div>
             </div>
 
-            <!-- Execution log -->
-            <div class="sub-section" style="flex:1;min-height:0;">
+            <!-- Execution log: flex-1, guaranteed min height -->
+            <div class="sub-section exec-log-section">
                 <div class="sub-title">EXECUTION LOG</div>
                 <div class="exec-log" id="exec-log">
                     <div class="log-empty">Awaiting execution…</div>
@@ -186,93 +235,8 @@ HALT            ; done</textarea>
             </div>
         </section>
 
-        <!-- ── Right: Memory ────────────────────────────────────────────── -->
-        <section class="panel memory-panel">
-            <div class="panel-header">
-                <span class="panel-title">MEMORY</span>
-                <div class="tabs">
-                    <button class="tab active" id="tab-data" onclick="switchTab('data')">DATA</button>
-                    <button class="tab"        id="tab-inst" onclick="switchTab('inst')">PROGRAM</button>
-                </div>
-            </div>
-
-            <!-- Column header labels -->
-            <div class="grid-col-header" id="col-header"></div>
-
-            <!-- Grids -->
-            <div class="grid-wrap" id="data-wrap">
-                <div class="grid-row-labels" id="row-labels-data"></div>
-                <div class="mem-grid" id="data-grid"></div>
-            </div>
-            <div class="grid-wrap hidden" id="inst-wrap">
-                <div class="grid-row-labels" id="row-labels-inst"></div>
-                <div class="mem-grid" id="inst-grid"></div>
-            </div>
-
-            <!-- Legend -->
-            <div class="mem-legend">
-                <div class="legend-item"><span class="legend-dot cyan"></span>Written / read</div>
-                <div class="legend-item" id="legend-pc"><span class="legend-dot pink"></span>Program counter</div>
-                <div class="legend-item"><span class="legend-dot amber"></span>Opcode byte</div>
-            </div>
-        </section>
-
     </main>
 </div><!-- #app -->
-
-<!-- ─── PCB Modal ──────────────────────────────────────────────────────────── -->
-<div id="pcb-modal" class="pcb-modal hidden">
-    <div class="pcb-modal-inner">
-        <div class="pcb-modal-header">
-            <div class="pcb-header-left">
-                <span class="pcb-title">PCB DIAGRAM</span>
-                <span class="pcb-subtitle">8-BIT RISC CPU · REV 1.0</span>
-            </div>
-            <div class="pcb-header-center" id="pcb-signal-label">
-                <span class="pcb-signal-dot"></span>
-                <span id="pcb-signal-text">IDLE</span>
-            </div>
-            <button class="btn btn-ghost" onclick="togglePCB()">✕ CLOSE</button>
-        </div>
-        <!-- Toolbar mirrored inside PCB view -->
-        <div class="toolbar pcb-inner-toolbar">
-            <div class="toolbar-left">
-                <button id="pcb-assemble-btn" class="btn btn-primary">▶ ASSEMBLE</button>
-                <div class="divider"></div>
-                <button id="pcb-step-btn"  class="btn btn-secondary" disabled>STEP →</button>
-                <button id="pcb-run-btn"   class="btn btn-secondary" disabled>▶ RUN</button>
-                <button id="pcb-reset-btn" class="btn btn-ghost"     disabled>↺ RESET</button>
-            </div>
-            <div class="toolbar-right">
-                <label class="speed-label">SPEED</label>
-                <input type="range" id="pcb-speed-slider" min="1" max="60" value="5">
-                <span id="pcb-speed-value" class="speed-val">5 Hz</span>
-            </div>
-        </div>
-        <!-- Message bar inside PCB -->
-        <div id="pcb-message-bar" class="message-bar hidden">
-            <span id="pcb-message-icon"></span>
-            <span id="pcb-message-text"></span>
-            <button class="msg-close" onclick="document.getElementById('pcb-message-bar').classList.add('hidden')">✕</button>
-        </div>
-        <div class="pcb-modal-body">
-            <div id="pcb-svg-wrap" class="pcb-svg-wrap"></div>
-            <div class="pcb-isa-panel">
-                <div class="pcb-isa-title">INSTRUCTION SET</div>
-                <table class="pcb-isa-table">
-                    <thead>
-                        <tr>
-                            <th>MNEMONIC</th>
-                            <th>OP</th>
-                            <th>DESCRIPTION</th>
-                        </tr>
-                    </thead>
-                    <tbody id="isa-tbody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script src="cpu.js"></script>
 <script src="pcb.js"></script>
