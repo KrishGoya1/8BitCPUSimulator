@@ -130,10 +130,10 @@ function buildGrids() {
             for (let col = 0; col < 16; col++) {
                 const addr = row * 16 + col;
                 const cell = document.createElement('div');
-                cell.className = 'mem-cell';
+                cell.className = 'mem-cell heat-0';
                 cell.id = id + '-' + addr;
                 cell.textContent = '00';
-                cell.title = '@' + hex2(addr);
+                cell.title = '@' + hex2(addr) + ' = 0x00';
                 grid.appendChild(cell);
             }
         }
@@ -141,17 +141,20 @@ function buildGrids() {
 }
 
 function buildColHeader() {
-    const hdr = document.getElementById('col-header');
-    hdr.innerHTML = '';
-    const corner = document.createElement('div');
-    corner.className = 'grid-col-lbl';
-    hdr.appendChild(corner);
-    for (let i = 0; i < 16; i++) {
-        const lbl = document.createElement('div');
-        lbl.className = 'grid-col-lbl';
-        lbl.textContent = i.toString(16).toUpperCase();
-        hdr.appendChild(lbl);
-    }
+    ['col-header-data', 'col-header-inst'].forEach(id => {
+        const hdr = document.getElementById(id);
+        if (!hdr) return;
+        hdr.innerHTML = '';
+        const corner = document.createElement('div');
+        corner.className = 'grid-col-lbl';
+        hdr.appendChild(corner);
+        for (let i = 0; i < 16; i++) {
+            const lbl = document.createElement('div');
+            lbl.className = 'grid-col-lbl';
+            lbl.textContent = i.toString(16).toUpperCase();
+            hdr.appendChild(lbl);
+        }
+    });
 }
 
 // ─── Assemble ────────────────────────────────────────────────────────────────
@@ -311,12 +314,15 @@ function updateMemGrids(pc) {
         const cell = document.getElementById('data-grid-' + addr);
         if (!cell) continue;
         const val = mem[addr];
-        cell.textContent = hex2(val);
+        
+        let heat = 0;
+        if (val > 0) heat = Math.min(4, Math.floor(val / 64) + 1);
+
+        cell.className = 'mem-cell heat-' + heat;
+        cell.title = '@' + hex2(addr) + ' = 0x' + hex2(val);
 
         const wasWritten = val !== prevMem[addr];
-        cell.className = 'mem-cell';
-        if (val !== 0)   cell.classList.add('nonzero');
-        if (wasWritten)  { cell.classList.add('written'); flashCell(cell); }
+        if (wasWritten) { flashCell(cell); }
     }
     prevMem.set(mem);
 
@@ -325,12 +331,15 @@ function updateMemGrids(pc) {
         const cell = document.getElementById('inst-grid-' + addr);
         if (!cell) continue;
         const val = inst[addr];
-        cell.textContent = hex2(val);
 
-        cell.className = 'mem-cell';
-        if (val !== 0xFF)               cell.classList.add('nonzero');
-        if (addr === pc)                cell.classList.add('pc-here');
-        else if (addr % 2 === 0 && val !== 0xFF) cell.classList.add('opcode');
+        let heat = 0;
+        // 0xFF means empty in instruction memory
+        if (val !== 0xFF) heat = 4;
+
+        cell.className = 'mem-cell heat-' + heat;
+        cell.title = '@' + hex2(addr) + ' = 0x' + hex2(val);
+
+        if (addr === pc) cell.classList.add('pc-here');
     }
     prevInst.set(inst);
 }
@@ -406,23 +415,7 @@ function addLogEntry(opcode, operand) {
     elExecLog.scrollTop = elExecLog.scrollHeight;
 }
 
-// ─── Tab switching (DATA ↔ PROGRAM only; PCB is always visible) ──────────────────
-function switchTab(tab) {
-    curTab = tab;
-    const isData = tab === 'data';
-    const isInst = tab === 'inst';
-
-    // Tab active states
-    document.getElementById('tab-data').classList.toggle('active', isData);
-    document.getElementById('tab-inst').classList.toggle('active', isInst);
-
-    // Show/hide content panes
-    document.getElementById('data-wrap').classList.toggle('hidden', !isData);
-    elInstWrap.classList.toggle('hidden', !isInst);
-
-    // PC legend dot only meaningful in PROGRAM view
-    document.getElementById('legend-pc').style.display = isInst ? '' : 'none';
-}
+// Tab switching removed: DATA and PROGRAM are horizontally stacked.
 
 // ─── Editor meta ─────────────────────────────────────────────────────────────
 function updateEditorMeta() {
@@ -442,7 +435,5 @@ function hideMessage() {
 // ─── Utilities ────────────────────────────────────────────────────────────────
 function hex2(n) { return n.toString(16).padStart(2, '0').toUpperCase(); }
 
-// Expose tab switch globally (called from HTML onclick)
-window.switchTab   = switchTab;
 window.hideMessage = hideMessage;
 

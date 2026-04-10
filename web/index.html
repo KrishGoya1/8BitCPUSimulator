@@ -155,34 +155,34 @@ HALT            ; done</textarea>
             <!-- ── Memory sub-panel: always visible, bottom half ──────────── -->
             <div class="memory-section">
                 <div class="panel-header">
-                    <span class="panel-title">MEMORY</span>
-                    <div class="tabs">
-                        <button class="tab active" id="tab-data" onclick="switchTab('data')">DATA</button>
-                        <button class="tab"        id="tab-inst" onclick="switchTab('inst')">PROGRAM</button>
+                    <span class="panel-title">MEMORY HEATMAPS</span>
+                </div>
+
+                <div class="memory-heatmaps-wrap">
+                    
+                    <div class="heatmap-col">
+                        <div class="heatmap-title">DATA</div>
+                        <div class="grid-col-header" id="col-header-data"></div>
+                        <div class="grid-wrap">
+                            <div class="grid-row-labels" id="row-labels-data"></div>
+                            <div class="mem-grid" id="data-grid"></div>
+                        </div>
                     </div>
+
+                    <div class="divider heatmap-divider"></div>
+
+                    <div class="heatmap-col">
+                        <div class="heatmap-title">PROGRAM</div>
+                        <div class="grid-col-header" id="col-header-inst"></div>
+                        <div class="grid-wrap">
+                            <div class="grid-row-labels" id="row-labels-inst"></div>
+                            <div class="mem-grid" id="inst-grid"></div>
+                        </div>
+                    </div>
+
                 </div>
 
-                <!-- Column header labels -->
-                <div class="grid-col-header" id="col-header"></div>
 
-                <!-- Data grid -->
-                <div class="grid-wrap" id="data-wrap">
-                    <div class="grid-row-labels" id="row-labels-data"></div>
-                    <div class="mem-grid" id="data-grid"></div>
-                </div>
-
-                <!-- Program grid -->
-                <div class="grid-wrap hidden" id="inst-wrap">
-                    <div class="grid-row-labels" id="row-labels-inst"></div>
-                    <div class="mem-grid" id="inst-grid"></div>
-                </div>
-
-                <!-- Legend -->
-                <div class="mem-legend" id="mem-legend">
-                    <div class="legend-item"><span class="legend-dot cyan"></span>Written / read</div>
-                    <div class="legend-item" id="legend-pc"><span class="legend-dot pink"></span>Program counter</div>
-                    <div class="legend-item"><span class="legend-dot amber"></span>Opcode byte</div>
-                </div>
             </div>
 
         </section>
