@@ -25,7 +25,6 @@ int main(int argc, char* argv[]) {
     vector<uint8_t> program;
     string line;
 
-    // map instruction mnemonics to opcodes
     unordered_map<string, uint8_t> opcodeMap = {
         {"NOP", NOP},
         {"LOAD_R0", LOAD_R0},
@@ -46,16 +45,14 @@ int main(int argc, char* argv[]) {
     };
 
     while (getline(infile, line)) {
-        // remove comments
         auto commentPos = line.find(';');
         if (commentPos != string::npos)
             line = line.substr(0, commentPos);
 
-        // trim whitespace
         stringstream ss(line);
         string instr;
         ss >> instr;
-        if (instr.empty()) continue; // skip empty lines
+        if (instr.empty()) continue;
 
         auto it = opcodeMap.find(instr);
         if (it == opcodeMap.end()) {
@@ -65,7 +62,6 @@ int main(int argc, char* argv[]) {
 
         program.push_back(it->second);
 
-        // check if instruction requires an operand
         if (it->second != NOP && it->second != MOV_R0_TO_R1 &&
             it->second != MOV_R1_TO_R0 && it->second != ADD_R0_R1 &&
             it->second != HALT) {
@@ -76,7 +72,6 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
 
-            // ensure operand fits in 1 byte
             if (operand < 0 || operand > 255) {
                 cout << "Operand out of range (0-255): " << operand << "\n";
                 return 1;
@@ -84,12 +79,9 @@ int main(int argc, char* argv[]) {
 
             program.push_back(static_cast<uint8_t>(operand));
         } else {
-            // instructions without operand, add dummy 0
             program.push_back(0);
         }
     }
-
-    // write output to a binary file
     ofstream outfile("program.bin", ios::binary);
     if (!outfile) {
         cout << "Error: cannot open program.bin for writing\n";

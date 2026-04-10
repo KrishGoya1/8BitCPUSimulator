@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU Simulator — WASM Visualizer</title>
+    <meta name="description" content="Interactive 8-bit CPU simulation visualizer powered by WebAssembly. Step through assembly programs and watch registers and memory update in real time.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ─── Loading Screen ─────────────────────────────────────────────────────── -->
+<div id="loading-screen">
+    <div class="loading-card">
+        <div class="loading-icon">⚙</div>
+        <h2 class="loading-title">CPU SIMULATOR</h2>
+        <p class="loading-sub">Initializing WebAssembly core...</p>
+        <div class="loading-bar-track"><div id="loading-bar" class="loading-bar-fill"></div></div>
+        <p id="loading-status" class="loading-status">Loading module...</p>
+    </div>
+</div>
+
+<!-- ─── Main App ──────────────────────────────────────────────────────────── -->
+<div id="app" class="hidden">
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="cpu-icon">⚙</div>
+            <div>
+                <h1 class="header-title">CPU SIMULATOR</h1>
+                <div class="header-sub">8-bit · 2 Registers · 256B Memory</div>
+            </div>
+        </div>
+        <div class="header-center">
+            <div class="stat-chip">
+                <span class="stat-label">CYCLES</span>
+                <span class="stat-val" id="cycle-counter">0</span>
+            </div>
+            <div class="stat-chip">
+                <span class="stat-label">PC</span>
+                <span class="stat-val" id="header-pc">0x00</span>
+            </div>
+            <div id="status-badge" class="status-badge ready">● READY</div>
+        </div>
+        <div class="header-right">
+            <div class="wasm-badge">
+                <span class="wasm-dot"></span>
+                WASM ACTIVE
+            </div>
+        </div>
+    </header>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <div class="toolbar-left">
+            <button id="assemble-btn" class="btn btn-primary">▶ ASSEMBLE</button>
+            <div class="divider"></div>
+            <button id="step-btn"  class="btn btn-secondary" disabled>STEP →</button>
+            <button id="run-btn"   class="btn btn-secondary" disabled>▶ RUN</button>
+            <button id="reset-btn" class="btn btn-ghost"     disabled>↺ RESET</button>
+        </div>
+        <div class="toolbar-right">
+            <label class="speed-label">SPEED</label>
+            <input type="range" id="speed-slider" min="1" max="60" value="5">
+            <span id="speed-value" class="speed-val">5 Hz</span>
+        </div>
+    </div>
+
+    <!-- Message bar -->
+    <div id="message-bar" class="message-bar hidden">
+        <span id="message-icon"></span>
+        <span id="message-text"></span>
+        <button class="msg-close" onclick="hideMessage()">✕</button>
+    </div>
+
+    <!-- Main grid -->
+    <main class="main-grid">
+
+        <!-- ── Left: Editor ─────────────────────────────────────────────── -->
+        <section class="panel editor-panel">
+            <div class="panel-header">
+                <span class="panel-title">ASSEMBLY EDITOR</span>
+                <span class="panel-chip">ISA v1</span>
+            </div>
+            <textarea id="editor" class="editor" spellcheck="false">; Countdown loop: R0 counts down 5→0
+; then halts with result in mem[10]
+
+LOAD_R0 5       ; R0 = 5
+STORE_R0 10     ; mem[10] = 5
+SUB_R0_IMM 1    ; R0 -= 1
+STORE_R0 10     ; mem[10] = current count
+JNZ 4           ; loop if R0 != 0
+HALT            ; done</textarea>
+            <div class="editor-footer">
+                <span id="line-count">8 lines</span>
+                <span id="byte-count">— bytes</span>
+            </div>
+
+            <!-- ISA quick reference -->
+            <div class="isa-ref">
+                <div class="isa-title">QUICK REFERENCE</div>
+                <div class="isa-grid">
+                    <div class="isa-group">
+                        <div class="isa-group-title">LOAD / MOV</div>
+                        <code>LOAD_R0 &lt;imm&gt;</code>
+                        <code>LOAD_R1 &lt;imm&gt;</code>
+                        <code>MOV_R0_R1</code>
+                        <code>MOV_R1_R0</code>
+                    </div>
+                    <div class="isa-group">
+                        <div class="isa-group-title">ARITHMETIC</div>
+                        <code>ADD_R0_IMM &lt;imm&gt;</code>
+                        <code>ADD_R0_R1</code>
+                        <code>SUB_R0_IMM &lt;imm&gt;</code>
+                    </div>
+                    <div class="isa-group">
+                        <div class="isa-group-title">MEMORY</div>
+                        <code>LOADM_R0 &lt;addr&gt;</code>
+                        <code>STORE_R0 &lt;addr&gt;</code>
+                        <code>LOADM_R1 &lt;addr&gt;</code>
+                        <code>STORE_R1 &lt;addr&gt;</code>
+                    </div>
+                    <div class="isa-group">
+                        <div class="isa-group-title">CONTROL</div>
+                        <code>JMP &lt;addr&gt;</code>
+                        <code>JZ  &lt;addr&gt;</code>
+                        <code>JNZ &lt;addr&gt;</code>
+                        <code>NOP</code>
+                        <code>HALT</code>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Middle: CPU State ────────────────────────────────────────── -->
+        <section class="panel cpu-panel">
+            <div class="panel-header">
+                <span class="panel-title">CPU STATE</span>
+            </div>
+
+            <!-- Registers -->
+            <div class="registers">
+                <div class="reg-card" id="card-r0">
+                    <div class="reg-name">R0</div>
+                    <div class="reg-hex" id="r0-hex">0x00</div>
+                    <div class="reg-dec" id="r0-dec">0</div>
+                    <div class="reg-track"><div class="reg-bar" id="r0-bar"></div></div>
+                    <div class="reg-bits" id="r0-bits">00000000</div>
+                </div>
+                <div class="reg-card" id="card-r1">
+                    <div class="reg-name">R1</div>
+                    <div class="reg-hex" id="r1-hex">0x00</div>
+                    <div class="reg-dec" id="r1-dec">0</div>
+                    <div class="reg-track"><div class="reg-bar" id="r1-bar"></div></div>
+                    <div class="reg-bits" id="r1-bits">00000000</div>
+                </div>
+                <div class="reg-card pc-card" id="card-pc">
+                    <div class="reg-name">PC</div>
+                    <div class="reg-hex" id="pc-hex">0x00</div>
+                    <div class="reg-dec" id="pc-dec">0</div>
+                    <div class="reg-track"><div class="reg-bar pc-bar" id="pc-bar"></div></div>
+                    <div class="reg-bits" id="pc-bits">00000000</div>
+                </div>
+            </div>
+
+            <!-- Disassembly -->
+            <div class="sub-section">
+                <div class="sub-title">DISASSEMBLY</div>
+                <div class="disasm" id="disasm">
+                    <div class="disasm-empty">No program loaded</div>
+                </div>
+            </div>
+
+            <!-- Execution log -->
+            <div class="sub-section" style="flex:1;min-height:0;">
+                <div class="sub-title">EXECUTION LOG</div>
+                <div class="exec-log" id="exec-log">
+                    <div class="log-empty">Awaiting execution…</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Right: Memory ────────────────────────────────────────────── -->
+        <section class="panel memory-panel">
+            <div class="panel-header">
+                <span class="panel-title">MEMORY</span>
+                <div class="tabs">
+                    <button class="tab active" id="tab-data" onclick="switchTab('data')">DATA</button>
+                    <button class="tab"        id="tab-inst" onclick="switchTab('inst')">PROGRAM</button>
+                </div>
+            </div>
+
+            <!-- Column header labels -->
+            <div class="grid-col-header" id="col-header"></div>
+
+            <!-- Grids -->
+            <div class="grid-wrap" id="data-wrap">
+                <div class="grid-row-labels" id="row-labels-data"></div>
+                <div class="mem-grid" id="data-grid"></div>
+            </div>
+            <div class="grid-wrap hidden" id="inst-wrap">
+                <div class="grid-row-labels" id="row-labels-inst"></div>
+                <div class="mem-grid" id="inst-grid"></div>
+            </div>
+
+            <!-- Legend -->
+            <div class="mem-legend">
+                <div class="legend-item"><span class="legend-dot cyan"></span>Written / read</div>
+                <div class="legend-item" id="legend-pc"><span class="legend-dot pink"></span>Program counter</div>
+                <div class="legend-item"><span class="legend-dot amber"></span>Opcode byte</div>
+            </div>
+        </section>
+
+    </main>
+</div><!-- #app -->
+
+<script src="cpu.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

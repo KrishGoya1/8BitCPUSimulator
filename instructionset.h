@@ -33,7 +33,7 @@ namespace ISA {
     // HALT
     constexpr uint8_t HALT = 0xFF;
 
-    // Helper: check if opcode is valid
+
     inline bool isValid(uint8_t opcode) {
         switch(opcode) {
             case NOP:
