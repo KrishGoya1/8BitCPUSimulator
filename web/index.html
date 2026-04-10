@@ -86,15 +86,33 @@
                 <span class="panel-title">ASSEMBLY EDITOR</span>
                 <span class="panel-chip">ISA v1</span>
             </div>
-            <textarea id="editor" class="editor" spellcheck="false">; Countdown loop: R0 counts down 5→0
-; then halts with result in mem[10]
+            <textarea id="editor" class="editor" spellcheck="false">; Draw a smiley face on the Heatmap!
 
-LOAD_R0 5       ; R0 = 5
-STORE_R0 10     ; mem[10] = 5
-SUB_R0_IMM 1    ; R0 -= 1
-STORE_R0 10     ; mem[10] = current count
-JNZ 4           ; loop if R0 != 0
-HALT            ; done</textarea>
+LOAD_R0 255     ; Brightest green (heat-4)
+
+; Left Eye
+STORE_R0 68     ; 0x44
+STORE_R0 69     ; 0x45
+STORE_R0 84     ; 0x54
+STORE_R0 85     ; 0x55
+
+; Right Eye
+STORE_R0 74     ; 0x4A
+STORE_R0 75     ; 0x4B
+STORE_R0 90     ; 0x5A
+STORE_R0 91     ; 0x5B
+
+; Smile
+STORE_R0 164    ; 0xA4
+STORE_R0 171    ; 0xAB
+STORE_R0 181    ; 0xB5
+STORE_R0 186    ; 0xBA
+STORE_R0 198    ; 0xC6
+STORE_R0 199    ; 0xC7
+STORE_R0 200    ; 0xC8
+STORE_R0 201    ; 0xC9
+
+HALT</textarea>
             <div class="editor-footer">
                 <span id="line-count">8 lines</span>
                 <span id="byte-count">— bytes</span>
