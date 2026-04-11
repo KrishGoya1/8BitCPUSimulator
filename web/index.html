@@ -65,8 +65,8 @@
         </div>
         <div class="toolbar-right">
             <label class="speed-label">SPEED</label>
-            <input type="range" id="speed-slider" min="1" max="60" value="5">
-            <span id="speed-value" class="speed-val">5 Hz</span>
+            <input type="range" id="speed-slider" min="1" max="1000" value="100">
+            <span id="speed-value" class="speed-val">100 Hz</span>
         </div>
     </div>
 
@@ -86,32 +86,122 @@
                 <span class="panel-title">ASSEMBLY EDITOR</span>
                 <span class="panel-chip">ISA v1</span>
             </div>
-            <textarea id="editor" class="editor" spellcheck="false">; Draw a smiley face on the Heatmap!
+            <textarea id="editor" class="editor" spellcheck="false">; SNAKE GAME
+; Use W/A/S/D to move the snake!
+; Use Speed Slider ~300 Hz for smooth gameplay.
 
-LOAD_R0 255     ; Brightest green (heat-4)
-
-; Left Eye
-STORE_R0 68     ; 0x44
-STORE_R0 69     ; 0x45
-STORE_R0 84     ; 0x54
-STORE_R0 85     ; 0x55
-
-; Right Eye
-STORE_R0 74     ; 0x4A
-STORE_R0 75     ; 0x4B
-STORE_R0 90     ; 0x5A
-STORE_R0 91     ; 0x5B
-
-; Smile
-STORE_R0 164    ; 0xA4
-STORE_R0 171    ; 0xAB
-STORE_R0 181    ; 0xB5
-STORE_R0 186    ; 0xBA
-STORE_R0 198    ; 0xC6
-STORE_R0 199    ; 0xC7
-STORE_R0 200    ; 0xC8
-STORE_R0 201    ; 0xC9
-
+LOAD_R0 100
+STORE_R0 255
+STORE_R0 250
+LOAD_R0 100
+STORE_R0 252
+LOADM_R1 252
+LOAD_R0 128
+STOREIND_R0_R1
+LOAD_R0 117
+STORE_R0 253
+LOAD_R0 0
+STORE_R0 248
+LOAD_R0 2
+STORE_R0 249
+LOAD_R0 116
+STORE_R0 224
+LOAD_R0 117
+STORE_R0 225
+LOAD_R0 255
+LOAD_R1 224
+STOREIND_R0_R1
+LOADM_R0 255
+STORE_R0 250
+LOADM_R0 250
+STORE_R0 240
+LOAD_R1 119
+SUB_R0_R1
+JZ 82
+LOADM_R0 240
+LOAD_R1 100
+SUB_R0_R1
+JZ 90
+LOADM_R0 240
+LOAD_R1 115
+SUB_R0_R1
+JZ 98
+LOADM_R0 240
+LOAD_R1 97
+SUB_R0_R1
+JZ 106
+JMP 194
+LOADM_R0 253
+SUB_R0_IMM 16
+STORE_R0 253
+JMP 114
+LOADM_R0 253
+ADD_R0_IMM 1
+STORE_R0 253
+JMP 114
+LOADM_R0 253
+ADD_R0_IMM 16
+STORE_R0 253
+JMP 114
+LOADM_R0 253
+SUB_R0_IMM 1
+STORE_R0 253
+JMP 114
+LOADM_R0 253
+LOADM_R1 252
+SUB_R0_R1
+JNZ 134
+LOADM_R0 254
+STORE_R0 252
+LOADM_R1 252
+LOAD_R0 128
+STOREIND_R0_R1
+JMP 168
+LOADM_R0 248
+ADD_R0_IMM 224
+STORE_R0 240
+LOADM_R1 240
+LOADIND_R0_R1
+STORE_R0 241
+LOADM_R1 241
+LOAD_R0 0
+STOREIND_R0_R1
+LOADM_R0 248
+ADD_R0_IMM 1
+STORE_R0 248
+LOAD_R1 16
+SUB_R0_R1
+JNZ 168
+LOAD_R0 0
+STORE_R0 248
+LOADM_R0 253
+LOAD_R1 224
+JGE_R0_R1 224
+LOADM_R0 253
+STORE_R0 240
+LOADM_R1 240
+LOADIND_R0_R1
+LOAD_R1 255
+SUB_R0_R1
+JZ 224
+LOAD_R0 255
+LOADM_R1 240
+STOREIND_R0_R1
+LOADM_R0 249
+ADD_R0_IMM 224
+STORE_R0 240
+LOADM_R0 253
+LOADM_R1 240
+STOREIND_R0_R1
+LOADM_R0 249
+ADD_R0_IMM 1
+STORE_R0 249
+LOAD_R1 16
+SUB_R0_R1
+JNZ 42
+LOAD_R0 0
+STORE_R0 249
+JMP 42
 HALT</textarea>
             <div class="editor-footer">
                 <span id="line-count">8 lines</span>
@@ -134,6 +224,7 @@ HALT</textarea>
                         <code>ADD_R0_IMM &lt;imm&gt;</code>
                         <code>ADD_R0_R1</code>
                         <code>SUB_R0_IMM &lt;imm&gt;</code>
+                        <code>SUB_R0_R1</code>
                     </div>
                     <div class="isa-group">
                         <div class="isa-group-title">MEMORY</div>
@@ -141,6 +232,8 @@ HALT</textarea>
                         <code>STORE_R0 &lt;addr&gt;</code>
                         <code>LOADM_R1 &lt;addr&gt;</code>
                         <code>STORE_R1 &lt;addr&gt;</code>
+                        <code>LOADIND_R0_R1</code>
+                        <code>STOREIND_R0_R1</code>
                     </div>
                     <div class="isa-group">
                         <div class="isa-group-title">CONTROL</div>

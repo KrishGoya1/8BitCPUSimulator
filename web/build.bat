@@ -19,7 +19,7 @@ emcc cpu_wasm.cpp ^
     -O2 ^
     -s MODULARIZE=1 ^
     -s EXPORT_NAME="CPUModule" ^
-    -s EXPORTED_FUNCTIONS="['_cpu_init','_cpu_reset','_cpu_load','_cpu_step','_cpu_get_r0','_cpu_get_r1','_cpu_get_pc','_cpu_is_halted','_cpu_get_mem','_cpu_get_inst','_cpu_snapshot_mem','_cpu_snapshot_inst','_cpu_assemble','_cpu_get_assembled_buf','_cpu_get_assembled_len','_cpu_get_error','_cpu_get_last_opcode','_cpu_get_last_operand','_malloc','_free']" ^
+    -s EXPORTED_FUNCTIONS="['_cpu_init','_cpu_reset','_cpu_load','_cpu_step','_cpu_get_r0','_cpu_get_r1','_cpu_get_pc','_cpu_is_halted','_cpu_get_mem','_cpu_set_mem','_cpu_get_inst','_cpu_snapshot_mem','_cpu_snapshot_inst','_cpu_assemble','_cpu_get_assembled_buf','_cpu_get_assembled_len','_cpu_get_error','_cpu_get_last_opcode','_cpu_get_last_operand','_malloc','_free']" ^
     -s EXPORTED_RUNTIME_METHODS="['stringToUTF8','lengthBytesUTF8','UTF8ToString','HEAPU8']" ^
     -s ALLOW_MEMORY_GROWTH=1 ^
     -s ENVIRONMENT=web ^

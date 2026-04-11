@@ -34,13 +34,17 @@ int main(int argc, char* argv[]) {
         {"ADD_R0_IMM", ADD_R0_IMM},
         {"ADD_R0_R1", ADD_R0_R1},
         {"SUB_R0_IMM", SUB_R0_IMM},
+        {"SUB_R0_R1",  SUB_R0_R1},
         {"LOADM_R0", LOADM_R0},
         {"STORE_R0", STORE_R0},
         {"LOADM_R1", LOADM_R1},
         {"STORE_R1", STORE_R1},
+        {"LOADIND_R0_R1", LOADIND_R0_R1},
+        {"STOREIND_R0_R1", STOREIND_R0_R1},
         {"JMP", JMP},
         {"JZ", JZ},
         {"JNZ", JNZ},
+        {"JGE_R0_R1", JGE_R0_R1},
         {"HALT", HALT}
     };
 
@@ -64,7 +68,8 @@ int main(int argc, char* argv[]) {
 
         if (it->second != NOP && it->second != MOV_R0_TO_R1 &&
             it->second != MOV_R1_TO_R0 && it->second != ADD_R0_R1 &&
-            it->second != HALT) {
+            it->second != SUB_R0_R1 && it->second != LOADIND_R0_R1 && 
+            it->second != STOREIND_R0_R1 && it->second != HALT) {
 
             int operand;
             if (!(ss >> operand)) {

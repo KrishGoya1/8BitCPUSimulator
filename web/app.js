@@ -13,15 +13,28 @@ const ISA = {
     0x10: { name: 'ADD_R0_IMM', hasOp: true  },
     0x11: { name: 'ADD_R0_R1',  hasOp: false },
     0x12: { name: 'SUB_R0_IMM', hasOp: true  },
+    0x13: { name: 'SUB_R0_R1',  hasOp: false },
     0x20: { name: 'LOADM_R0',   hasOp: true  },
     0x21: { name: 'STORE_R0',   hasOp: true  },
     0x22: { name: 'LOADM_R1',   hasOp: true  },
     0x23: { name: 'STORE_R1',   hasOp: true  },
+    0x24: { name: 'LOADIND_R0_R1', hasOp: false },
+    0x25: { name: 'STOREIND_R0_R1', hasOp: false },
     0x30: { name: 'JMP',        hasOp: true  },
     0x31: { name: 'JZ',         hasOp: true  },
     0x32: { name: 'JNZ',        hasOp: true  },
+    0x33: { name: 'JGE_R0_R1',  hasOp: true  },
     0xFF: { name: 'HALT',       hasOp: false },
 };
+
+// ─── IO State ────────────────────────────────────────────────────────────────
+let sysLastKey = 100;
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'w' || e.key === 'W') sysLastKey = 0x77;
+    else if (e.key === 'a' || e.key === 'A') sysLastKey = 0x61;
+    else if (e.key === 's' || e.key === 'S') sysLastKey = 0x73;
+    else if (e.key === 'd' || e.key === 'D') sysLastKey = 0x64;
+});
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let M         = null;   // WASM module
@@ -202,6 +215,12 @@ function singleStep() {
 }
 
 function doStep() {
+    // Inject IO state right before execution step
+    if (M._cpu_set_mem) {
+        M._cpu_set_mem(255, sysLastKey); 
+        M._cpu_set_mem(254, Math.floor(Math.random() * 256));
+    }
+
     const opBefore = M._cpu_get_pc();
     M._cpu_step();
     cycles++;
@@ -227,10 +246,18 @@ function toggleRun() {
 
 function startRunLoop() {
     const hz = parseInt(elSpeedSlider.value);
+    
+    // Calculate optimal interval and operations per interval
+    // Browsers cap minimum setInterval to ~4ms, so frame time shouldn't drop below 16ms for stability
+    let interval = Math.max(16, 1000 / hz); 
+    let opsPerTick = Math.max(1, Math.round(hz / (1000 / interval)));
+
     runTimer = setInterval(() => {
-        if (M._cpu_is_halted()) { stopRun(); return; }
-        doStep();
-    }, 1000 / hz);
+        for (let i = 0; i < opsPerTick; i++) {
+            if (M._cpu_is_halted()) { stopRun(); return; }
+            doStep();
+        }
+    }, interval);
 }
 
 function stopRun() {

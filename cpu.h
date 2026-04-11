@@ -76,6 +76,11 @@ void step(CPU &cpu) {
             cpu.pc += 2;
             break;
 
+        case 0x13: // SUB R0 -= R1
+            cpu.r0 -= cpu.r1;
+            cpu.pc += 2;
+            break;
+
         // --------------------
         // MEMORY
         // --------------------
@@ -99,6 +104,16 @@ void step(CPU &cpu) {
             cpu.pc += 2;
             break;
 
+        case 0x24: // LOADIND R0, R1
+            cpu.r0 = cpu.mem[cpu.r1];
+            cpu.pc += 2;
+            break;
+
+        case 0x25: // STOREIND R0, R1
+            cpu.mem[cpu.r1] = cpu.r0;
+            cpu.pc += 2;
+            break;
+
         // --------------------
         // CONTROL FLOW
         // --------------------
@@ -115,6 +130,13 @@ void step(CPU &cpu) {
 
         case 0x32: // JNZ (if R0 != 0)
             if (cpu.r0 != 0)
+                cpu.pc = operand;
+            else
+                cpu.pc += 2;
+            break;
+
+        case 0x33: // JGE_R0_R1 (if R0 >= R1)
+            if (cpu.r0 >= cpu.r1)
                 cpu.pc = operand;
             else
                 cpu.pc += 2;

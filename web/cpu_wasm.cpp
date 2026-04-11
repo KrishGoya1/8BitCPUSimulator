@@ -60,6 +60,11 @@ EMSCRIPTEN_KEEPALIVE uint8_t cpu_get_last_operand(){ return g_last_operand; }
 EMSCRIPTEN_KEEPALIVE uint8_t cpu_get_mem(int addr) {
     return (addr >= 0 && addr < 256) ? g_cpu.mem[addr] : 0;
 }
+EMSCRIPTEN_KEEPALIVE void cpu_set_mem(int addr, uint8_t val) {
+    if (addr >= 0 && addr < 256) {
+        g_cpu.mem[addr] = val;
+    }
+}
 EMSCRIPTEN_KEEPALIVE uint8_t cpu_get_inst(int addr) {
     return (addr >= 0 && addr < 256) ? g_cpu.inst[addr] : 0xFF;
 }
@@ -89,10 +94,11 @@ EMSCRIPTEN_KEEPALIVE int cpu_assemble(const char* src) {
         {"LOAD_R0",    LOAD_R0},   {"LOAD_R1",    LOAD_R1},
         {"MOV_R0_R1",  MOV_R0_TO_R1}, {"MOV_R1_R0", MOV_R1_TO_R0},
         {"ADD_R0_IMM", ADD_R0_IMM}, {"ADD_R0_R1",  ADD_R0_R1},
-        {"SUB_R0_IMM", SUB_R0_IMM},
+        {"SUB_R0_IMM", SUB_R0_IMM}, {"SUB_R0_R1",  SUB_R0_R1},
         {"LOADM_R0",   LOADM_R0},  {"STORE_R0",   STORE_R0},
         {"LOADM_R1",   LOADM_R1},  {"STORE_R1",   STORE_R1},
-        {"JMP",        JMP},  {"JZ", JZ},  {"JNZ", JNZ},
+        {"LOADIND_R0_R1", LOADIND_R0_R1}, {"STOREIND_R0_R1", STOREIND_R0_R1},
+        {"JMP",        JMP},  {"JZ", JZ},  {"JNZ", JNZ}, {"JGE_R0_R1", JGE_R0_R1},
         {"HALT",       HALT}
     };
 
@@ -130,7 +136,8 @@ EMSCRIPTEN_KEEPALIVE int cpu_assemble(const char* src) {
         g_assembled[g_assembled_len++] = op;
 
         bool needsOp = (op != NOP && op != MOV_R0_TO_R1 && op != MOV_R1_TO_R0 &&
-                        op != ADD_R0_R1 && op != HALT);
+                        op != ADD_R0_R1 && op != SUB_R0_R1 && 
+                        op != LOADIND_R0_R1 && op != STOREIND_R0_R1 && op != HALT);
 
         if (needsOp) {
             int operand;
